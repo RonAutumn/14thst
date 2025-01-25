@@ -30,6 +30,11 @@ const nextConfig = {
   },
   eslint: {
     ignoreDuringBuilds: true,
+    dirs: ['pages', 'components', 'lib', 'src']
+  },
+  output: 'standalone',
+  experimental: {
+    serverActions: true
   }
 }
 
