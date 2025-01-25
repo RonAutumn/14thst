@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    // Suppress the punycode deprecation warning
+    config.ignoreWarnings = [
+      { module: /node_modules\/punycode/ }
+    ];
+
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
