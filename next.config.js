@@ -1,11 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Suppress the punycode deprecation warning
-    config.ignoreWarnings = [
-      { module: /node_modules\/punycode/ }
-    ];
-
+  webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
@@ -15,15 +10,6 @@ const nextConfig = {
       child_process: false,
       async_hooks: false,
     };
-
-    // Handle path issues in Windows
-    config.module.rules.push({
-      test: /\.m?js$/,
-      resolve: {
-        fullySpecified: false,
-      },
-    });
-
     return config;
   },
   images: {
@@ -37,30 +23,14 @@ const nextConfig = {
         hostname: 'i.imgur.com',
       }
     ],
-    dangerouslyAllowSVG: true,
-    contentDispositionType: 'attachment',
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     domains: ['res.cloudinary.com'],
   },
-  reactStrictMode: false,
-  swcMinify: true,
-  output: 'export',
   typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    // !! WARN !!
     ignoreBuildErrors: true,
   },
   eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
     ignoreDuringBuilds: true,
-  },
-  poweredByHeader: false,
-  productionBrowserSourceMaps: false,
-  optimizeFonts: false,
-  compress: false
+  }
 }
 
 module.exports = nextConfig
