@@ -42,8 +42,8 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     domains: ['res.cloudinary.com'],
   },
-  reactStrictMode: true,
-  swcMinify: true,
+  reactStrictMode: false,
+  swcMinify: false,
   output: 'standalone',
   typescript: {
     // !! WARN !!
@@ -57,11 +57,10 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  experimental: {
-    // Add experimental features to make build more permissive
-    forceSwcTransforms: true,
-    esmExternals: 'loose'
-  }
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
+  optimizeFonts: false,
+  compress: false
 }
 
 module.exports = nextConfig
