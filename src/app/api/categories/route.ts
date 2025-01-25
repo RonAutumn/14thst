@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getCategories, createCategory, updateCategory } from '@/lib/airtable';
 
+// Add dynamic flag to prevent static optimization
+export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
+
 export async function GET() {
   try {
     const categories = await getCategories();
-    
+
     // Add product count (this will be updated when we implement product-category relationships)
     const categoriesWithCount = categories.map(category => ({
       ...category,
       productCount: 0 // This will be updated when we implement product counting
     }));
-    
+
     return NextResponse.json(categoriesWithCount);
   } catch (error) {
     console.error('Error fetching categories:', error);
