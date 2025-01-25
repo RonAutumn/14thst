@@ -43,8 +43,8 @@ const nextConfig = {
     domains: ['res.cloudinary.com'],
   },
   reactStrictMode: false,
-  swcMinify: false,
-  output: 'standalone',
+  swcMinify: true,
+  output: 'export',
   typescript: {
     // !! WARN !!
     // Dangerously allow production builds to successfully complete even if
