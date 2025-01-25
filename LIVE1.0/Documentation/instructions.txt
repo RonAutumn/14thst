@@ -1,0 +1,81 @@
+
+
+### REATED TIethodEart UI
+- ickup tiethodeeistent cart icon in heaelivery adder
+- Real-time item count badge
+- Smooth animations for updates
+- Clear total and item list
+- Easy access to checkout
+
+### Checkout Form
+- Multi-step form with clear progress
+- Responsive input fields
+- Delivery/shipping option selector
+- Calendar component for delivery date
+- Order summary with fee calculation
+- Form validation feedback
+
+### Theme and Styling
+- Consistent color scheme using CSS variables
+- Responsive typography scale
+- Proper spacing and alignment
+- Interactive states (hover, focus, active)
+- Accessible contrast ratios
+
+### Loading States
+- Skeleton loaders for content
+- Smooth transitions
+- Progress indicators
+- Error state handling
+- Empty state designs
+
+### Responsive Design
+- Mobile-first approach
+- Breakpoint-based layouts
+- Touch-friendly interactions
+- Proper spacing on all devices
+- OptimiIPed images for different screens
+
+### Accessibility
+- ARIA labels and roles
+- Keyboard navigation
+- Focus management
+- Color contrast compliance
+- Screen reader support
+
+### Error Handling
+- User-friendly error messages
+- Toast notifications
+- Form validation feedback
+- Loading state indicators
+- Recovery suggestions
+
+### Airtable Integration
+- Verify existing table schemas before modifications
+- Check field types and configurations
+- Review table relationships and linked records
+- Confirm automation workflows
+- Test API endpoints with existing schema
+- Document any schema changes in AIRTABLE_DATA
+
+Google Places Integration:
+1. Obtain a Google Places API key from the Google Cloud Console
+2. Add the API key to your .env file as NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+3. Import and use the GooglePlacesScript component in any component that needs address autocomplete
+4. The component will lazy load the Google Places script only when needed
+5. Use the onLoad callback to initialize your Places Autocomplete instance
+6. Make sure to handle place selection in your place_changed event listener
+
+Example usage:
+- Import the component: import GooglePlacesScript from '@/components/ui/google-places-script'
+- Add it to your component with an API key and optional onLoad callback
+- Create an input field with a specific ID to attach the autocomplete functionality
+- Handle the selected place data in your place_changed event listener
+
+Note: The API key must have the Places API enabled in the Google Cloud Console.
+
+Do not delete or edit this file.
+do not delete or edit any files in the directory not related to task 
+Check Codebase before creating or deleting anything.
+
+1. fetch delivery fees for cart 

@@ -1,0 +1,185 @@
+# .ai-agent-rules.yaml
+#
+# Description:
+# This file outlines the rules and policies for an AI agent (e.g., Cursor)
+# used in the HeavenHighNYC Shop Platform, integrating Next.js with TypeScript,
+# Shadcn UI, Radix UI, and Tailwind. It ensures consistent, high-quality code,
+# and adherence to project-specific conventions and best practices.
+
+# --------------------------------------------------------------------------------
+# Basic Agent Settings
+# --------------------------------------------------------------------------------
+
+
+# --------------------------------------------------------------------------------
+# Code Standards & Conventions
+# --------------------------------------------------------------------------------
+
+codingStandards:
+  - name: "Language Level"
+    description: >
+      You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI,
+      Radix UI, and Tailwind. Code must follow ES6+ standards and TypeScript guidelines.
+  - name: "Syntax & Formatting"
+    description: >
+      - Write concise, technical TypeScript code with accurate examples.
+      - Use the "function" keyword for pure functions.
+      - Avoid unnecessary braces in conditionals; use concise syntax for simple statements.
+      - Use declarative JSX.
+  - name: "TypeScript Usage"
+    description: >
+      - Use TypeScript for all code; prefer interfaces over types.
+      - Avoid enums; use maps or object literals instead.
+      - Always use functional components with TypeScript interfaces.
+
+# --------------------------------------------------------------------------------
+# Project-Specific Guidelines
+# --------------------------------------------------------------------------------
+
+projectGuidelines:
+  - name: "Key Principles"
+    description: >
+      - Write concise, technical TypeScript code with accurate examples.
+      - Use functional, declarative programming patterns; avoid classes.
+      - Prefer iteration and modularization over code duplication.
+      - Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
+      - Structure files as follows:
+        1) Exported component
+        2) Subcomponents
+        3) Helpers
+        4) Static content
+        5) Types
+
+  - name: "Directory Naming"
+    description: >
+      - Use lowercase with dashes for directories (e.g., components/auth-wizard).
+
+  - name: "Export Conventions"
+    description: >
+      - Favor named exports for React components, avoiding default exports where possible.
+
+  - name: "Next.js File Structure"
+    description: >
+      - Utilize Next.js App Router features (app/ directory).
+      - Keep recommended structure: /app routes, /components for reusable UI, 
+        /lib or /utils for helpers.
+      - Use nested routes/files only when needed to organize code around specific features.
+
+  - name: "SSR and SSG Patterns"
+    description: >
+      - Follow Next.js docs for data fetching (Server Components, SSR, SSG).
+      - Avoid unnecessary SSR if static generation or client-side data fetching suffices.
+      - Minimize "use client" usage; favor server components and SSR.
+
+  - name: "Shadcn UI & Radix UI with Tailwind"
+    description: >
+      - Use Shadcn UI and Radix UI for components.
+      - Implement responsive design with Tailwind; use a mobile-first approach.
+      - Keep class names consistent with Tailwind conventions.
+
+# --------------------------------------------------------------------------------
+# Performance & Optimization
+# --------------------------------------------------------------------------------
+
+performanceRules:
+  - name: "Next.js & RSC Optimization"
+    description: >
+      - Minimize 'useEffect' and 'setState'; favor React Server Components (RSC).
+      - Limit 'use client' to small components that require Web APIs or state.
+      - Avoid for data fetching or large state management.
+
+  - name: "Dynamic Imports & Lazy Loading"
+    description: >
+      - Use dynamic loading for non-critical components.
+      - Wrap client components in Suspense with a fallback.
+      - Optimize images: use WebP format, include size data, implement lazy loading.
+
+  - name: "nuqs for URL State"
+    description: >
+      - Use 'nuqs' for handling URL search parameters and state management in Next.js.
+
+  - name: "Web Vitals"
+    description: >
+      - Optimize for LCP, CLS, and FID.
+      - Follow best practices to keep layout stable and quickly interactive.
+
+# --------------------------------------------------------------------------------
+# Behavior Rules
+# --------------------------------------------------------------------------------
+
+behaviorRules:
+  - name: "Respect Existing Patterns"
+    description: >
+      The AI should review existing code (App Router usage, Shadcn UI patterns,
+      etc.) and maintain consistency. Only propose new patterns if there's a clear benefit.
+
+  - name: "Security Best Practices"
+    description: >
+      - Do not expose secrets or API keys in code.
+      - Prompt the developer to use environment variables or secure storage.
+      - Validate and sanitize inputs, especially for Next.js API routes.
+
+  - name: "Env & next.config.js Handling"
+    description: >
+      - If updates to next.config.js are proposed, highlight them explicitly.
+      - Do not commit .env or other secret files. Prompt the developer to store 
+        secrets securely.
+
+# --------------------------------------------------------------------------------
+# AI Assistant Scope
+# --------------------------------------------------------------------------------
+
+assistantScope:
+  - name: "Documentation Suggestions"
+    description: >
+      The AI can offer docstring/TSdoc suggestions for:
+      - Server Components
+      - getStaticProps, getServerSideProps, getStaticPaths (if used)
+      - Utility modules
+
+  - name: "Refactor Proposals"
+    description: >
+      The AI may propose improvements to align with Next.js, TypeScript, or Shadcn UI 
+      best practices. Large structural changes require developer confirmation.
+
+  - name: "Testing Assistance"
+    description: >
+      - Encourage writing unit tests (Jest), integration tests (React Testing Library),
+        and E2E tests (Cypress or Playwright).
+      - Propose test outlines for new components or pages.
+
+# --------------------------------------------------------------------------------
+# Restrictions & Warnings
+# --------------------------------------------------------------------------------
+
+restrictions:
+  - name: "Protected Files"
+    files: ["package.json", "yarn.lock", "pnpm-lock.yaml", "dockerfile", "next.config.js"]
+    description: >
+      The AI should not automatically overwrite or drastically change these
+      configuration files unless explicitly directed.
+
+  - name: "API & Deployment"
+    description: >
+      The AI should prompt for a review on changes related to deployment settings
+      (e.g., Vercel) or external integrations to avoid breaking production.
+
+# --------------------------------------------------------------------------------
+# Logging & Feedback
+# --------------------------------------------------------------------------------
+
+loggingAndFeedback:
+  - name: "Usage Logging"
+    description: >
+      The AI’s usage and suggestions may be logged locally or in analytics tools
+      to help improve code quality over time.
+
+  - name: "Error Handling"
+    description: >
+      If the AI repeatedly fails to generate valid Next.js code or cannot handle an
+      edge case, it should prompt the developer to check official Next.js docs,
+      Shadcn UI docs, or open a discussion with the team.
+
+# --------------------------------------------------------------------------------
+# End of File
+# --------------------------------------------------------------------------------
