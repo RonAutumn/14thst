@@ -43,8 +43,24 @@ const BOROUGH_SETTINGS = {
 type Step = 'contact' | 'delivery' | 'payment';
 
 // Update the time slot types to be more specific
-type SaturdayTimeSlot = '11:00' | '12:00' | '13:00' | '14:00' | '15:00' | '16:00';
-type RegularTimeSlot = '18:00' | '19:00' | '20:00' | '21:00' | '22:00';
+type SaturdayTimeSlot = 
+  | '11:00' | '11:15' | '11:30' | '11:45'
+  | '12:00' | '12:15' | '12:30' | '12:45'
+  | '13:00' | '13:15' | '13:30' | '13:45'
+  | '14:00' | '14:15' | '14:30' | '14:45'
+  | '15:00' | '15:15' | '15:30' | '15:45'
+  | '16:00' | '16:15' | '16:30' | '16:45'
+  | '17:00' | '17:15' | '17:30' | '17:45';
+
+type RegularTimeSlot = 
+  | '12:00' | '12:15' | '12:30' | '12:45'
+  | '13:00' | '13:15' | '13:30' | '13:45'
+  | '14:00' | '14:15' | '14:30' | '14:45'
+  | '15:00' | '15:15' | '15:30' | '15:45'
+  | '16:00' | '16:15' | '16:30' | '16:45'
+  | '17:00' | '17:15' | '17:30' | '17:45'
+  | '18:00';
+
 type DeliveryTime = SaturdayTimeSlot | RegularTimeSlot;
 
 // Update the Borough type to exclude null from the index signature
@@ -470,8 +486,8 @@ export default function CheckoutPage() {
     // Clear irrelevant fields when switching methods
     if (method === 'delivery') {
       setFormData(prev => {
-        const newDeliveryFee = prev.borough ? calculateDeliveryFee(prev.borough, subtotal) : 0;
-        setFee(newDeliveryFee);
+        const currentBorough = prev.borough;
+        const currentFee = currentBorough ? calculateDeliveryFee(currentBorough, subtotal) : 0;
         return {
           ...prev,
           shippingAddress: '',
@@ -481,10 +497,13 @@ export default function CheckoutPage() {
           shippingMethod: '',
           pickupDate: undefined,
           pickupTime: '18:00' as DeliveryTime,
-          deliveryFee: newDeliveryFee
+          deliveryFee: currentFee
         };
       });
-      setSelectedRate(null);
+      // Don't reset selected rate if we're already in delivery mode
+      if (method !== deliveryMethod) {
+        setSelectedRate(null);
+      }
     } else if (method === 'shipping') {
       setFormData(prev => ({
         ...prev,
@@ -754,15 +773,16 @@ export default function CheckoutPage() {
       freeThreshold: settings.freeThreshold
     });
     
+    // Update both fee and form data in one go
     setFee(newFee);
     setFormData(prev => ({
-        ...prev,
-        borough,
-        deliveryFee: newFee
+      ...prev,
+      borough,
+      deliveryFee: newFee
     }));
 
-    // Automatically move to delivery options after borough selection
-    setCurrentStep('delivery');
+    // Force a re-render by updating the delivery method
+    handleDeliveryMethodChange('delivery');
   };
 
   return (
@@ -1248,16 +1268,42 @@ export default function CheckoutPage() {
                           <SelectValue placeholder="Select pickup time" />
                         </SelectTrigger>
                         <SelectContent>
-                          {/* Every day has the same hours: 12-6 PM */}
-                          <>
-                            <SelectItem value="12:00">12:00 PM</SelectItem>
-                            <SelectItem value="13:00">1:00 PM</SelectItem>
-                            <SelectItem value="14:00">2:00 PM</SelectItem>
-                            <SelectItem value="15:00">3:00 PM</SelectItem>
-                            <SelectItem value="16:00">4:00 PM</SelectItem>
-                            <SelectItem value="17:00">5:00 PM</SelectItem>
-                            <SelectItem value="18:00">6:00 PM</SelectItem>
-                          </>
+                          {formData.pickupDate?.getDay() === 6 ? (
+                            // Saturday time slots (11 AM - 5 PM)
+                            <>
+                              {Array.from({ length: 25 }, (_, i) => {
+                                const hour = Math.floor(i / 4) + 11;
+                                const minute = (i % 4) * 15;
+                                const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                                const hour12 = hour > 12 ? hour - 12 : hour;
+                                const period = hour >= 12 ? 'PM' : 'AM';
+                                const displayTime = `${hour12}:${minute.toString().padStart(2, '0')} ${period}`;
+                                return (
+                                  <SelectItem key={time} value={time}>
+                                    {displayTime}
+                                  </SelectItem>
+                                );
+                              })}
+                            </>
+                          ) : (
+                            // Regular time slots (12 PM - 6 PM)
+                            <>
+                              {Array.from({ length: 25 }, (_, i) => {
+                                const hour = Math.floor(i / 4) + 12;
+                                const minute = (i % 4) * 15;
+                                if (hour > 18 || (hour === 18 && minute > 0)) return null;
+                                const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                                const hour12 = hour > 12 ? hour - 12 : hour;
+                                const period = 'PM';
+                                const displayTime = `${hour12}:${minute.toString().padStart(2, '0')} ${period}`;
+                                return (
+                                  <SelectItem key={time} value={time}>
+                                    {displayTime}
+                                  </SelectItem>
+                                );
+                              })}
+                            </>
+                          )}
                         </SelectContent>
                       </Select>
                       {errors.pickupTime && <p className="text-sm text-red-500">{errors.pickupTime}</p>}

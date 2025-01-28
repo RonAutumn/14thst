@@ -3,7 +3,6 @@ import { getCategories, createCategory, updateCategory } from '@/lib/airtable';
 
 // Add dynamic flag to prevent static optimization
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET() {
   try {

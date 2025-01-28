@@ -25,26 +25,42 @@ interface BaseOrder {
 
 // Interface for raw order data from API
 export interface RawOrderData {
+  'Order ID'?: string;
+  'Customer Name'?: string;
+  'Email'?: string;
+  'Phone'?: string;
+  'Address'?: string;
+  'City'?: string;
+  'State'?: string;
+  'Zip Code'?: string;
+  'Items'?: string;
+  'Payment Method'?: string;
+  'Status'?: OrderStatus;
+  'Total'?: number;
+  'Timestamp'?: string;
+  'Shipment ID'?: string;
+  'Tracking Number'?: string;
+  'Label URL'?: string;
+  'Shipping Method'?: string;
+  'Shipping Fee'?: number;
   id?: string;
   orderId?: string;
-  customerName?: string;
-  email?: string;
-  phone?: string;
-  deliveryAddress?: string;
-  items?: string;
-  status?: OrderStatus;
-  total?: number;
-  timestamp?: string;
-  shipmentId?: string;
-  trackingNumber?: string;
-  labelUrl?: string;
+  address2?: string;
+  apartment?: string;
 }
 
 export interface ShippingOrder extends BaseOrder {
-  deliveryAddress: string;
+  address: string;
+  address2?: string;  // Optional second address line
+  apartment?: string; // Optional apartment/unit number
+  city: string;
+  state: string;
+  zipCode: string;
   shipmentId?: string;
   trackingNumber?: string;
   labelUrl?: string;
+  shippingMethod: string;
+  shippingFee?: number;
 }
 
 export interface DeliveryOrder extends BaseOrder {

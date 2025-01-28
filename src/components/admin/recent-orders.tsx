@@ -1,8 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Order, OrderItem, OrderStatus } from "@/types/orders"
-import { cn } from "@/lib/utils"
 import {
   Table,
   TableBody,
@@ -12,6 +10,28 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
+
+interface OrderItem {
+  name: string
+  quantity: number
+  price: number
+  selectedVariation?: {
+    flavor?: string
+    price?: number
+  }
+}
+
+interface Order {
+  id: string
+  orderId: string
+  customerName: string
+  items: OrderItem[]
+  status: string
+  total: number
+  timestamp: string
+  type: 'delivery' | 'shipping' | 'pickup'
+}
 
 export function RecentOrders() {
   const [orders, setOrders] = useState<Order[]>([])
@@ -21,26 +41,11 @@ export function RecentOrders() {
     async function fetchOrders() {
       try {
         const response = await fetch('/api/orders')
+        if (!response.ok) {
+          throw new Error('Failed to fetch orders')
+        }
         const data = await response.json()
-        
-        // Combine and sort all orders by timestamp
-        const allOrders = [...(data.delivery || []), ...(data.shipping || [])]
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-          .slice(0, 5) // Only show latest 5 orders
-          .map((order: any): Order => ({
-            ...order,
-            items: Array.isArray(order.items) 
-              ? order.items.map((item: any): OrderItem => ({
-                  ...item,
-                  unitPrice: item.price || 0,
-                  weight: item.weight || 0
-                }))
-              : [],
-            status: (order.status as OrderStatus) || 'pending',
-            total: typeof order.total === 'number' ? order.total : 0
-          }))
-        
-        setOrders(allOrders)
+        setOrders(data)
       } catch (error) {
         console.error('Error fetching orders:', error)
       } finally {
@@ -61,6 +66,7 @@ export function RecentOrders() {
                 <TableHead>Order</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Items</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Total</TableHead>
               </TableRow>
@@ -71,6 +77,7 @@ export function RecentOrders() {
                   <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-[70px]" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-[70px]" /></TableCell>
                   <TableCell className="text-right"><Skeleton className="h-4 w-[60px] ml-auto" /></TableCell>
                 </TableRow>
@@ -91,6 +98,7 @@ export function RecentOrders() {
               <TableHead>Order</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Items</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Total</TableHead>
             </TableRow>
@@ -98,7 +106,7 @@ export function RecentOrders() {
           <TableBody>
             {orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No orders found
                 </TableCell>
               </TableRow>
@@ -107,7 +115,8 @@ export function RecentOrders() {
                 <TableRow key={order.id}>
                   <TableCell className="font-medium">{order.orderId}</TableCell>
                   <TableCell>{order.customerName}</TableCell>
-                  <TableCell>{(order.items || []).length} items</TableCell>
+                  <TableCell>{order.items.length} items</TableCell>
+                  <TableCell className="capitalize">{order.type}</TableCell>
                   <TableCell>
                     <div className={cn(
                       "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
@@ -124,7 +133,7 @@ export function RecentOrders() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    ${(order.total ?? 0).toFixed(2)}
+                    ${order.total.toFixed(2)}
                   </TableCell>
                 </TableRow>
               ))

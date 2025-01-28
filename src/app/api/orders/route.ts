@@ -9,7 +9,9 @@ import {
   getFeeByBorough,
   calculateDeliveryFee,
   calculateShippingFee,
-  validateDeliveryOrder
+  validateDeliveryOrder,
+  getAirtableData,
+  TABLES
 } from '@/lib/airtable'
 import { generateOrderId } from '@/lib/utils'
 import type { Order } from '@/types/product'
@@ -19,15 +21,44 @@ import type { DeliveryOrderData, ShippingOrderData } from '@/features/cart/types
 
 export async function GET() {
   try {
-    const [deliveryOrders, shippingOrders] = await Promise.all([
-      getDeliveryOrders(),
-      getShippingOrders()
+    // Fetch orders from all tables
+    const [deliveryOrders, shippingOrders, pickupOrders] = await Promise.all([
+      getAirtableData(TABLES.DELIVERY_ORDERS, {
+        fields: ['Order ID', 'Customer Name', 'Items', 'Status', 'Total', 'Timestamp'],
+      }),
+      getAirtableData(TABLES.SHIPPING_ORDERS, {
+        fields: ['Order ID', 'Customer Name', 'Items', 'Status', 'Total', 'Timestamp'],
+      }),
+      getAirtableData(TABLES.PICKUP_ORDERS, {
+        fields: ['Order ID', 'Customer Name', 'Items', 'Status', 'Total', 'Timestamp'],
+      })
     ])
 
-    return NextResponse.json({
-      delivery: deliveryOrders,
-      shipping: shippingOrders
-    })
+    // Format orders
+    const formatOrders = (orders: any[], type: string) => orders.map(order => ({
+      id: order.id,
+      orderId: order['Order ID'],
+      customerName: order['Customer Name'],
+      items: JSON.parse(order['Items'] || '[]'),
+      status: order['Status']?.toLowerCase() || 'pending',
+      total: Number(order['Total']) || 0,
+      timestamp: order['Timestamp'],
+      type
+    }))
+
+    // Combine all orders
+    const allOrders = [
+      ...formatOrders(deliveryOrders, 'delivery'),
+      ...formatOrders(shippingOrders, 'shipping'),
+      ...formatOrders(pickupOrders, 'pickup')
+    ]
+
+    // Sort by timestamp and get the 5 most recent orders
+    const recentOrders = allOrders
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 5)
+
+    return NextResponse.json(recentOrders)
   } catch (error) {
     console.error('Error fetching orders:', error)
     return NextResponse.json(

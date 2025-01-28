@@ -21,9 +21,13 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'i.imgur.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '14thst.com',
       }
     ],
-    domains: ['res.cloudinary.com'],
+    domains: ['res.cloudinary.com', '14thst.com'],
   },
   typescript: {
     ignoreBuildErrors: true,

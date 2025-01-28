@@ -74,18 +74,38 @@ export function ShippingOrders() {
         return
       }
 
-      const validatedOrders = ordersData.orders.map((order: RawOrderData): ShippingOrder => ({
-        id: order.id || order.orderId || 'unknown',
-        orderId: order.orderId || order.id || 'unknown',
-        customerName: order.customerName || 'Unknown Customer',
-        email: order.email || '',
-        phone: order.phone || '',
-        deliveryAddress: order.deliveryAddress || '',
-        items: order.items || '',
-        status: order.status || 'pending',
-        total: typeof order.total === 'number' ? order.total : 0,
-        timestamp: order.timestamp || new Date().toISOString()
-      }))
+      const validatedOrders = ordersData.orders.map((order: RawOrderData): ShippingOrder => {
+        console.log('Validating order:', order);
+        
+        // Parse items if they're stored as a string
+        let parsedItems;
+        try {
+          parsedItems = typeof order['Items'] === 'string' ? JSON.parse(order['Items']) : order['Items'];
+        } catch (error) {
+          console.error(`Error parsing items for order ${order['Order ID']}:`, error);
+          parsedItems = [];
+        }
+
+        return {
+          id: order['Order ID'] || 'unknown',
+          orderId: order['Order ID'] || 'unknown',
+          customerName: order['Customer Name'] || 'Unknown Customer',
+          email: order['Email'] || '',
+          phone: order['Phone'] || '',
+          address: order['Address'] || '',
+          items: parsedItems,
+          status: order['Status'] || 'pending',
+          total: typeof order['Total'] === 'number' ? order['Total'] : 0,
+          timestamp: order['Timestamp'] || new Date().toISOString(),
+          shippingMethod: order['Shipping Method'] || 'No shipping method selected',
+          city: order['City'] || '',
+          state: order['State'] || '',
+          zipCode: order['Zip Code'] || '',
+          address2: order.address2 || '',
+          apartment: order.apartment || '',
+          shippingFee: typeof order['Shipping Fee'] === 'number' ? order['Shipping Fee'] : 0
+        }
+      })
 
       console.log('✅ Validated orders:', validatedOrders)
       setOrders(validatedOrders)
@@ -179,6 +199,7 @@ export function ShippingOrders() {
                 Date {sortField === 'timestamp' && <ArrowUpDown className="inline w-4 h-4" />}
               </TableHead>
               <TableHead>Customer</TableHead>
+              <TableHead>Shipping Address</TableHead>
               <TableHead>Status</TableHead>
               <TableHead onClick={() => handleSort('total')} className="cursor-pointer">
                 Total {sortField === 'total' && <ArrowUpDown className="inline w-4 h-4" />}
@@ -196,6 +217,16 @@ export function ShippingOrders() {
                     <div>
                       <p className="font-medium">{order.customerName}</p>
                       <p className="text-sm text-muted-foreground">{order.email}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{order.address}</p>
+                      {order.address2 && <p className="text-sm">{order.address2}</p>}
+                      {order.apartment && <p className="text-sm">Apt/Unit: {order.apartment}</p>}
+                      <p className="text-sm text-muted-foreground">
+                        {order.city}, {order.state} {order.zipCode}
+                      </p>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -235,7 +266,7 @@ export function ShippingOrders() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-4">
+                <TableCell colSpan={7} className="text-center py-4">
                   No shipping orders found
                 </TableCell>
               </TableRow>

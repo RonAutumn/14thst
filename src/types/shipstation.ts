@@ -1,6 +1,8 @@
 export interface Address {
     name: string;
+    company?: string;
     street1: string;
+    street2?: string;
     city: string;
     state: string;
     postalCode: string;
@@ -10,69 +12,73 @@ export interface Address {
 
 export interface Weight {
     value: number;
-    units: 'pounds' | 'ounces' | 'grams';
+    units: string;
 }
 
 export interface Dimensions {
     length: number;
     width: number;
     height: number;
-    units: 'inches' | 'centimeters';
+    units: string;
 }
 
 export interface ShipmentDetails {
-    orderId: string;
     orderNumber: string;
-    orderDate: string;
-    orderStatus: string;
+    orderKey: string;
+    orderDate?: string;
+    orderStatus?: string;
     customerName: string;
     customerEmail: string;
     billTo: Address;
     shipTo: Address;
-    items: Array<{
-        sku: string;
-        name: string;
-        quantity: number;
-        unitPrice: number;
-        weight?: Weight;
-    }>;
-    weight?: Weight;
-    dimensions?: Dimensions;
-    carrierCode?: string;
-    serviceCode?: string;
-    packageCode?: string;
+    items: OrderItem[];
+    carrierCode: string;
+    serviceCode: string;
+    packageCode: string;
     confirmation?: string;
-    shipDate?: string;
+    weight: Weight;
+    dimensions?: Dimensions;
+    testLabel?: boolean;
+}
+
+export interface OrderItem {
+    sku: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    weight?: Weight;
 }
 
 export interface ShipmentResponse {
-    shipmentId: string;
     orderId: string;
     orderNumber: string;
-    status: string;
+    orderKey: string;
+    shipmentId?: number;
+    labelData?: string;
+    trackingNumber?: string;
+}
+
+export interface ShippingLabel {
+    shipmentId: number;
+    orderId: string;
+    labelData: string;
+    trackingNumber: string;
 }
 
 export interface ShippingRate {
-    rateId: string;
-    serviceName: string;
     serviceCode: string;
+    serviceName: string;
     shipmentCost: number;
     otherCost: number;
     totalCost: number;
     transitDays: number;
-    carrier: string;
-}
-
-export interface ShippingLabel {
-    labelId: string;
-    trackingNumber: string;
-    labelUrl: string;
-    shipmentId: string;
+    carrierCode: string;
 }
 
 export interface TrackingInfo {
     trackingNumber: string;
     status: string;
     statusDate: string;
-    carrier: string;
+    carrierCode: string;
+    trackingUrl?: string;
 } 

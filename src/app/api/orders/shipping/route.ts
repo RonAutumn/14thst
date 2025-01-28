@@ -1,14 +1,52 @@
 import { NextResponse } from 'next/server';
-import { createShippingOrder, getShippingOrders, updateShippingOrderStatus, verifyAirtableConnection } from '@/lib/airtable';
-import { logOrderError } from '@/lib/error-logging';
-import type { ShippingOrderData } from '@/features/cart/types';
 import { base } from '@/lib/airtable';
 import { TABLES } from '@/lib/constants';
+import { logOrderError } from '@/lib/error-logging';
+import type { ShippingOrderData } from '@/features/cart/types';
+import { createShippingOrder, getShippingOrders, updateShippingOrderStatus, verifyAirtableConnection } from '@/lib/airtable';
+import { db } from "@/lib/db"
 
 export async function GET() {
   try {
-    const orders = await getShippingOrders();
-    return NextResponse.json(orders);
+    // Fetch all shipping orders from Airtable
+    const records = await base(TABLES.SHIPPING_ORDERS)
+      .select({
+        sort: [{ field: 'Timestamp', direction: 'desc' }],
+        filterByFormula: "Status != 'cancelled'"
+      })
+      .all();
+
+    console.log('Raw Airtable records:', records);
+
+    // Format the orders
+    const formattedOrders = records.map(record => {
+      const fields = record.fields;
+      console.log('Processing record:', fields);
+
+      return {
+        id: record.id,
+        orderId: fields['Order ID'] || record.id,
+        customerName: fields['Customer Name'] || 'Unknown',
+        email: fields['Email'] || '',
+        status: fields['Status'] || 'pending',
+        shippingMethod: fields['Shipping Method'] || 'Standard Shipping',
+        shippingFee: parseFloat(fields['Shipping Fee']?.toString() || '0'),
+        total: parseFloat(fields['Total']?.toString() || '0'),
+        items: typeof fields['Items'] === 'string'
+          ? JSON.parse(fields['Items'])
+          : fields['Items'] || [],
+        address: fields['Address'] || '',
+        city: fields['City'] || '',
+        state: fields['State'] || '',
+        zipCode: fields['Zip Code'] || '',
+        phone: fields['Phone'] || '',
+        trackingNumber: fields['Tracking Number'] || '',
+        createdAt: fields['Timestamp'] || new Date().toISOString()
+      };
+    });
+
+    console.log('Formatted orders:', formattedOrders);
+    return NextResponse.json(formattedOrders);
   } catch (error) {
     console.error('Error fetching shipping orders:', error);
     return NextResponse.json(
@@ -35,11 +73,11 @@ export async function POST(request: Request) {
     } = data;
 
     // Create the shipping order in Airtable
-    const record = await base(TABLES.SHIPPING_ORDERS).create({
+    const record = await base(TABLES.SHIPPING_ORDERS).create([{
       fields: {
-        'Address': shippingAddress,
+        'Shipping Address': shippingAddress,
         'City': shippingCity,
-        'Created Time': new Date().toISOString(),
+        'Timestamp': new Date().toISOString(),
         'Customer Name': name,
         'Email': email,
         'Items': JSON.stringify(items),
@@ -48,10 +86,9 @@ export async function POST(request: Request) {
         'Phone': phone,
         'State': shippingState,
         'Status': 'pending',
-        'Timestamp': new Date().toISOString(),
         'Zip Code': shippingZip
       }
-    });
+    }]);
 
     // Log successful order creation
     console.info('Shipping order created successfully:', {
@@ -59,7 +96,7 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString(),
     });
 
-    return NextResponse.json({ success: true, recordId: record.id });
+    return NextResponse.json({ success: true, recordId: record[0].id });
   } catch (error) {
     // Log the error with context
     const errorContext = {
@@ -96,8 +133,18 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const order = await updateShippingOrderStatus(id, status);
-    return NextResponse.json(order);
+    // Update the order status in Airtable
+    const record = await base(TABLES.SHIPPING_ORDERS).update(id, {
+      'Status': status
+    });
+
+    return NextResponse.json({
+      success: true,
+      order: {
+        id: record.id,
+        status: record.fields['Status']
+      }
+    });
   } catch (error) {
     console.error('Error updating shipping order status:', error);
     return NextResponse.json(

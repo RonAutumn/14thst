@@ -14,5 +14,7 @@ export interface AirtableShippingOrder {
     'Shipment ID'?: string;
     'Tracking Number'?: string;
     'Label URL'?: string;
-    'Shipping Rate'?: string;
+    'Shipping Method': string;
+    'Total': string;
+    'Shipping Fee'?: string;
 } 

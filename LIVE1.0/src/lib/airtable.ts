@@ -374,7 +374,6 @@ export const getShippingOrders = async (): Promise<OrderRecord[]> => {
 // Create delivery order
 export const createDeliveryOrder = async (data: { name: string; email: string; phone: string; address: string; borough: string; items: OrderItem[]; orderId: string; paymentMethod?: string; total: number; deliveryFee?: number }) => {
   return createRecord(TABLES.DELIVERY_ORDERS, {
-    'Created Time': new Date().toISOString(),
     'Customer Name': data.name,
     'Email': data.email,
     'Phone': data.phone,
@@ -391,7 +390,6 @@ export const createDeliveryOrder = async (data: { name: string; email: string; p
 // Create shipping order
 export const createShippingOrder = async (data: { name: string; email: string; phone: string; shippingAddress: string; items: OrderItem[]; orderId: string; paymentMethod?: string; total: number; shippingFee?: number }) => {
   return createRecord(TABLES.SHIPPING_ORDERS, {
-    'Created Time': new Date().toISOString(),
     'Customer Name': data.name,
     'Email': data.email,
     'Phone': data.phone,
@@ -488,7 +486,6 @@ export const createPickupOrder = async (data: {
       'Status': 'pending',
       'Pickup Date': data.pickupDate,
       'Pickup Time': data.pickupTime,
-      'Created Time': new Date().toISOString()
     });
 
     return {

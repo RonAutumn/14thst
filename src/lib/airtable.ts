@@ -213,65 +213,24 @@ export interface Category {
 // Get all categories from Airtable
 export const getCategories = async (): Promise<Category[]> => {
   try {
-    console.log('getCategories - Starting...');
-    console.log('getCategories - API Key:', env.AIRTABLE_API_KEY ? '✓ Present' : '✗ Missing');
-    console.log('getCategories - Base ID:', env.AIRTABLE_BASE_ID ? '✓ Present' : '✗ Missing');
-    console.log('getCategories - Table Name:', TABLES.CATEGORY);
+    const records = await base(TABLES.CATEGORY)
+      .select({
+        view: 'Grid view',
+        filterByFormula: "NOT({Name} = '')",
+        sort: [{ field: 'Display Order', direction: 'asc' }]
+      })
+      .all();
 
-    if (!env.AIRTABLE_API_KEY || !env.AIRTABLE_BASE_ID) {
-      throw new Error('Airtable configuration is missing. Please check your .env file.');
-    }
-
-    console.log('getCategories - Initializing query...');
-    const queryParams = {
-      view: "Grid view",
-      filterByFormula: "NOT({Name} = '')",
-      sort: [{ field: "Display Order", direction: "asc" as const }],
-      fields: ['Name', 'Description', 'Display Order', 'Is Active', 'Products']
-    };
-    console.log('getCategories - Query params:', queryParams);
-
-    console.log('getCategories - Fetching records...');
-    const records = await base(TABLES.CATEGORY).select(queryParams).all();
-    console.log('getCategories - Records fetched:', records.length);
-
-    // Log the first record structure if available
-    if (records.length > 0) {
-      console.log('getCategories - Sample record fields:', Object.keys(records[0].fields));
-      console.log('getCategories - Sample record data:', {
-        id: records[0].id,
-        name: records[0].fields.Name,
-        displayOrder: records[0].fields['Display Order'],
-        isActive: records[0].fields['Is Active']
-      });
-    }
-
-    const categories = Array.from(records).map(record => {
-      const category = {
-        id: record.id,
-        name: String(record.fields.Name || ''),
-        description: String(record.fields.Description || ''),
-        displayOrder: Number(record.fields['Display Order']) || 0,
-        isActive: record.fields['Is Active'] === true,
-        products: Array.isArray(record.fields.Products) ? record.fields.Products : []
-      };
-      console.log('getCategories - Processed category:', {
-        id: category.id,
-        name: category.name,
-        displayOrder: category.displayOrder
-      });
-      return category;
-    });
-
-    console.log('getCategories - Total categories processed:', categories.length);
-    return categories;
-  } catch (error: any) {
-    console.error('Error fetching categories:', {
-      message: error?.message,
-      type: error?.name,
-      statusCode: error?.statusCode,
-      stack: error?.stack
-    });
+    return records.map(record => ({
+      id: record.id,
+      name: String(record.fields.Name || ''),
+      description: String(record.fields.Description || ''),
+      displayOrder: Number(record.fields['Display Order']) || 0,
+      isActive: Boolean(record.fields['Is Active']),
+      products: Array.isArray(record.fields.Products) ? record.fields.Products : []
+    }));
+  } catch (error) {
+    console.error('Error fetching categories:', error);
     throw error;
   }
 };
@@ -374,7 +333,7 @@ export const getShippingOrders = async (): Promise<OrderRecord[]> => {
 // Create delivery order
 export const createDeliveryOrder = async (data: { name: string; email: string; phone: string; address: string; borough: string; items: OrderItem[]; orderId: string; paymentMethod?: string; total: number; deliveryFee?: number }) => {
   return createRecord(TABLES.DELIVERY_ORDERS, {
-    'Created Time': new Date().toISOString(),
+    'Timestamp': new Date().toISOString(),
     'Customer Name': data.name,
     'Email': data.email,
     'Phone': data.phone,
@@ -388,10 +347,11 @@ export const createDeliveryOrder = async (data: { name: string; email: string; p
     'Delivery Fee': data.deliveryFee || 0
   });
 };
+
 // Create shipping order
 export const createShippingOrder = async (data: { name: string; email: string; phone: string; shippingAddress: string; items: OrderItem[]; orderId: string; paymentMethod?: string; total: number; shippingFee?: number }) => {
   return createRecord(TABLES.SHIPPING_ORDERS, {
-    'Created Time': new Date().toISOString(),
+    'Timestamp': new Date().toISOString(),
     'Customer Name': data.name,
     'Email': data.email,
     'Phone': data.phone,
@@ -404,6 +364,7 @@ export const createShippingOrder = async (data: { name: string; email: string; p
     'Shipping Fee': data.shippingFee || 0
   });
 };
+
 // Update delivery order status
 export const updateDeliveryOrderStatus = async (recordId: string, status: OrderStatus) => {
   return updateRecord(TABLES.DELIVERY_ORDERS, recordId, { Status: status });
@@ -477,6 +438,9 @@ export const createPickupOrder = async (data: {
   pickupTime: string;
 }) => {
   try {
+    // Combine pickup date and time
+    const pickupDateTime = new Date(`${data.pickupDate}T${data.pickupTime}`);
+
     const record = await createRecord(TABLES.PICKUP_ORDERS, {
       'Customer Name': data.name,
       'Email': data.email,
@@ -486,14 +450,13 @@ export const createPickupOrder = async (data: {
       'Payment Method': data.paymentMethod || 'stripe',
       'Total': data.total,
       'Status': 'pending',
-      'Pickup Date': data.pickupDate,
-      'Pickup Time': data.pickupTime,
-      'Created Time': new Date().toISOString()
-    });
+      'Pickup Date': pickupDateTime.toISOString(),
+      'Timestamp': new Date().toISOString()
+    }) as Record<FieldSet>;
 
     return {
-      ...record,
-      orderId: record['Order ID']
+      id: record.id,
+      orderId: record.fields['Order ID'] || data.orderId
     };
   } catch (error) {
     console.error('Error creating pickup order:', error);

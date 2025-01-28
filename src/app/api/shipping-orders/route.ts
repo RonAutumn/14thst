@@ -26,7 +26,9 @@ export async function GET() {
                 'Shipment ID',
                 'Tracking Number',
                 'Label URL',
-                'Status'
+                'Status',
+                'Shipping Method',
+                'Total'
             ],
             sort: [{ field: 'Timestamp', direction: 'desc' }]
         }) as unknown as AirtableShippingOrder[];
@@ -46,23 +48,43 @@ export async function GET() {
         // Transform Airtable data to match our frontend interface
         const transformedOrders = shippingOrders.map(order => {
             console.log(`🔄 Transforming order ${order['Order ID']}`);
-            return {
+            console.log('Raw Airtable order:', order);
+            console.log('ZIP Code from Airtable:', order['Zip Code']);
+
+            // Parse items if they're stored as a string
+            let parsedItems;
+            try {
+                parsedItems = typeof order['Items'] === 'string' ? JSON.parse(order['Items']) : order['Items'];
+            } catch (error) {
+                console.error(`Error parsing items for order ${order['Order ID']}:`, error);
+                parsedItems = [];
+            }
+
+            const transformedOrder = {
                 id: order['Order ID'],
                 orderId: order['Order ID'],
                 customerName: order['Customer Name'] || '',
                 email: order['Email'] || '',
                 phone: order['Phone'] || '',
-                items: order['Items'] || [],
+                items: parsedItems,
                 status: order['Status'] || 'pending',
-                total: 0, // Will be calculated in the frontend
+                total: parseFloat(order['Total'] || '0'),
                 timestamp: order['Timestamp'] || '',
                 method: 'shipping' as const,
-                deliveryAddress: `${order['Address'] || ''}, ${order['City'] || ''}, ${order['State'] || ''} ${order['Zip Code'] || ''}`,
-                borough: order['City'] || '',
+                address: order['Address'] || '',
+                city: order['City'] || '',
+                state: order['State'] || '',
+                zipCode: order['Zip Code'] || '',
                 shipmentId: order['Shipment ID'] || '',
                 trackingNumber: order['Tracking Number'] || '',
-                labelUrl: order['Label URL'] || ''
+                labelUrl: order['Label URL'] || '',
+                shippingMethod: order['Shipping Method'] || '',
+                shippingFee: order['Shipping Fee'] ? parseFloat(order['Shipping Fee']) : 0
             };
+
+            console.log('Transformed order:', transformedOrder);
+            console.log('ZIP code in transformed order:', transformedOrder.zipCode);
+            return transformedOrder;
         });
 
         console.log('✨ Transformed orders:', JSON.stringify(transformedOrders, null, 2));
@@ -75,16 +97,17 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
     try {
-        const { id, shipmentId, trackingNumber, labelUrl, status } = await request.json();
+        const { id, shipmentId, trackingNumber, labelUrl, status, 'Zip Code': zipCode } = await request.json();
 
         if (!id) {
             return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
         }
 
-        const updateData: Partial<AirtableShippingOrder> = {
-            'Status': status
-        };
+        const updateData: Partial<AirtableShippingOrder> = {};
 
+        if (status) {
+            updateData['Status'] = status;
+        }
         if (shipmentId) {
             updateData['Shipment ID'] = shipmentId;
         }
@@ -93,6 +116,9 @@ export async function PATCH(request: Request) {
         }
         if (labelUrl) {
             updateData['Label URL'] = labelUrl;
+        }
+        if (zipCode) {
+            updateData['Zip Code'] = zipCode;
         }
 
         await updateAirtableRecord('Shipping Orders', id, updateData);
@@ -110,11 +136,20 @@ export async function POST(request: Request) {
 
         // Create shipment in ShipStation with the selected rate
         const shipmentDetails: ShipmentDetails = {
-            orderId: data.orderId,
             orderNumber: data.orderId,
+            orderKey: data.orderId,
             customerName: data.name,
             customerEmail: data.email,
-            address: {
+            billTo: {
+                name: data.name,
+                street1: data.shippingAddress,
+                city: data.shippingCity,
+                state: data.shippingState,
+                postalCode: data.shippingZip,
+                country: 'US'
+            },
+            shipTo: {
+                name: data.name,
                 street1: data.shippingAddress,
                 city: data.shippingCity,
                 state: data.shippingState,
@@ -122,11 +157,19 @@ export async function POST(request: Request) {
                 country: 'US'
             },
             items: data.items.map((item: any) => ({
-                sku: item.id,
-                name: item.name,
                 quantity: item.quantity,
-                unitPrice: item.price
-            }))
+                weight: {
+                    value: 1,
+                    units: 'ounces'
+                }
+            })),
+            carrierCode: 'stamps_com',
+            serviceCode: 'usps_priority_mail',
+            packageCode: 'package',
+            weight: {
+                value: 1,
+                units: 'ounces'
+            }
         };
 
         // Create shipment in ShipStation
@@ -134,12 +177,12 @@ export async function POST(request: Request) {
 
         // Create shipping label using the selected rate
         if (data.selectedRate) {
-            const label = await createShippingLabel(shipmentResponse.shipmentId, data.selectedRate.id);
+            const label = await createShippingLabel(String(shipmentResponse.shipmentId), data.selectedRate.id);
 
             // Update data with shipping information
             data.shipmentId = shipmentResponse.shipmentId;
             data.trackingNumber = label.trackingNumber;
-            data.labelUrl = label.labelUrl;
+            data.labelUrl = label.labelData;
         }
 
         // Create record in Airtable
@@ -160,12 +203,8 @@ export async function POST(request: Request) {
                 'Shipment ID': data.shipmentId,
                 'Tracking Number': data.trackingNumber,
                 'Label URL': data.labelUrl,
-                'Shipping Rate': JSON.stringify({
-                    carrier: data.selectedRate?.carrier,
-                    service: data.selectedRate?.name,
-                    cost: data.selectedRate?.price,
-                    estimatedDays: data.selectedRate?.estimatedDays
-                })
+                'Shipping Method': data.selectedRate?.name || data.shippingMethod || 'Standard Shipping',
+                'Total': data.total || 0
             }
         }]);
 

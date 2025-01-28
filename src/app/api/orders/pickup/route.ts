@@ -1,3 +1,5 @@
+"use client"
+
 import { NextResponse } from 'next/server';
 import { base, TABLES } from '@/lib/airtable';
 import { logOrderError } from '@/lib/error-logging';
@@ -17,16 +19,18 @@ export async function POST(request: Request) {
             paymentMethod = 'card'
         } = data;
 
+        // Combine pickup date and time
+        const pickupDateTime = new Date(`${pickupDate}T${pickupTime}`);
+
         // Create the pickup order in Airtable
         const record = await base(TABLES.PICKUP_ORDERS).create([
             {
                 fields: {
-                    'Created Time': new Date().toISOString(),
+                    'Timestamp': new Date().toISOString(),
                     'Customer Name': name,
                     'Email': email,
                     'Phone': phone,
-                    'Pickup Date': pickupDate,
-                    'Pickup Time': pickupTime,
+                    'Pickup Date': pickupDateTime.toISOString(),
                     'Items': JSON.stringify(items),
                     'Order ID': orderId,
                     'Payment Method': paymentMethod,

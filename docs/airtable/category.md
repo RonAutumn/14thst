@@ -3,7 +3,7 @@
 Generated on: 2025-01-18 08:46:07
 Total Records: 9
 
-| Created Time | Description | Display Order | Is Active | Name | Products | Record ID |
+| ID | Description | Display Order | Is Active | Name | Products | Record ID |
 | --- | --- | --- | --- | --- | --- | --- |
 | 2025-01-17T17:16:44.000Z |  |  |  |  | ["rec40fFzoJisSi6ll"] | rec3tDfp1XLPctX56 |
 | 2025-01-13T13:32:37.000Z |  | 2 | True | Brownies | ["recVZyWfWzJmmb61H", "recRSjRodQmywXTmg"] | recUn0GaljNXqLB7P |

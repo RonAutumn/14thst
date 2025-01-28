@@ -29,39 +29,241 @@ async function handleShipStationResponse<T>(response: Response): Promise<T> {
 export async function createShipment(details: ShipmentDetails): Promise<ShipmentResponse> {
     console.log('Creating shipment with details:', JSON.stringify(details, null, 2));
 
-    const response = await fetch(`${SHIPSTATION_API_URL}/orders/createorder`, {
+    // Validate required fields
+    if (!details.weight?.value || !details.weight?.units) {
+        throw new Error('Weight value and units are required');
+    }
+
+    if (!details.packageCode) {
+        throw new Error('packageCode is required');
+    }
+
+    if (!details.shipTo?.name || !details.shipTo?.street1 || !details.shipTo?.city ||
+        !details.shipTo?.state || !details.shipTo?.postalCode) {
+        throw new Error('Complete shipping address is required');
+    }
+
+    // Ensure country codes are uppercase
+    const shipTo = {
+        ...details.shipTo,
+        country: details.shipTo.country?.toUpperCase() || 'US'
+    };
+
+    const shipFrom = {
+        name: process.env.SHIP_FROM_NAME,
+        company: process.env.SHIP_FROM_COMPANY,
+        street1: process.env.SHIP_FROM_STREET,
+        city: process.env.SHIP_FROM_CITY,
+        state: process.env.SHIP_FROM_STATE,
+        postalCode: process.env.SHIP_FROM_POSTAL_CODE,
+        country: (process.env.SHIP_FROM_COUNTRY || "US").toUpperCase(),
+        phone: process.env.SHIP_FROM_PHONE
+    };
+
+    // Validate shipFrom address
+    if (!shipFrom.name || !shipFrom.street1 || !shipFrom.city ||
+        !shipFrom.state || !shipFrom.postalCode) {
+        throw new Error('Incomplete shipFrom address in environment variables');
+    }
+
+    const orderData = {
+        orderNumber: details.orderNumber,
+        orderKey: details.orderKey,
+        orderDate: details.orderDate || new Date().toISOString(),
+        orderStatus: details.orderStatus || 'awaiting_shipment',
+        customerUsername: details.customerName,
+        customerEmail: details.customerEmail,
+        billTo: {
+            ...details.billTo,
+            country: details.billTo?.country?.toUpperCase() || 'US'
+        },
+        shipTo,
+        shipFrom,
+        items: details.items,
+        amountPaid: details.items.reduce((total, item) => total + (item.quantity * item.unitPrice), 0),
+        taxAmount: 0,
+        shippingAmount: 0,
+        carrierCode: details.carrierCode || 'stamps_com',
+        serviceCode: details.serviceCode || 'usps_first_class_mail',
+        packageCode: details.packageCode,
+        confirmation: details.confirmation || 'none',
+        weight: details.weight,
+        dimensions: details.dimensions || {
+            length: 12,
+            width: 12,
+            height: 12,
+            units: 'inches'
+        },
+        testLabel: details.testLabel ?? (process.env.NODE_ENV !== 'production')
+    };
+
+    console.log('Creating order with data:', JSON.stringify(orderData, null, 2));
+
+    // Create the order in ShipStation
+    const orderResponse = await fetch(`${SHIPSTATION_API_URL}/orders/createorder`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(details)
+        body: JSON.stringify(orderData)
     });
 
-    return handleShipStationResponse<ShipmentResponse>(response);
+    const order = await handleShipStationResponse<ShipmentResponse>(orderResponse);
+
+    if (!order.orderId || order.orderId === '-1') {
+        throw new Error('Failed to create order: Invalid orderId returned');
+    }
+
+    console.log('Order created successfully:', JSON.stringify(order, null, 2));
+
+    // Create a label using the shared function
+    const label = await createShippingLabel(
+        order.orderId,
+        orderData.serviceCode,
+        {
+            carrierCode: orderData.carrierCode,
+            packageCode: orderData.packageCode,
+            confirmation: orderData.confirmation,
+            weight: orderData.weight,
+            dimensions: orderData.dimensions,
+            testLabel: orderData.testLabel,
+            shipTo,
+            shipFrom
+        }
+    );
+
+    // Consider the operation successful if we have label data
+    if (!label.labelData) {
+        throw new Error('Failed to create shipping label: No label data returned');
+    }
+
+    return {
+        ...order,
+        shipmentId: label.shipmentId || -1,
+        labelData: label.labelData,
+        trackingNumber: label.trackingNumber
+    };
 }
 
-export async function getShippingRates(shipmentId: string): Promise<ShippingRate[]> {
-    console.log('Fetching rates for shipment:', shipmentId);
+export async function getShippingRates(orderId: string): Promise<ShippingRate[]> {
+    console.log('Fetching rates for order:', orderId);
 
-    const response = await fetch(`${SHIPSTATION_API_URL}/shipments/${shipmentId}/rates`, {
-        method: 'GET',
-        headers
+    const response = await fetch(`${SHIPSTATION_API_URL}/shipments/getrates`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ orderId })
     });
 
     return handleShipStationResponse<ShippingRate[]>(response);
 }
 
-export async function createShippingLabel(
-    shipmentId: string,
-    rateId: string
-): Promise<ShippingLabel> {
-    console.log('Creating shipping label for shipment:', shipmentId, 'with rate:', rateId);
+interface CreateLabelOptions {
+    carrierCode?: string;
+    packageCode?: string;
+    confirmation?: string;
+    weight?: any;
+    dimensions?: any;
+    testLabel?: boolean;
+    shipTo?: any;
+    shipFrom?: any;
+}
 
-    const response = await fetch(`${SHIPSTATION_API_URL}/shipments/${shipmentId}/createlabel`, {
+export async function createShippingLabel(
+    orderId: string,
+    serviceCode: string,
+    options: CreateLabelOptions = {}
+): Promise<ShippingLabel> {
+    console.log('Creating shipping label for order:', orderId, 'with service:', serviceCode);
+
+    if (!orderId || orderId === '-1') {
+        throw new Error('Invalid orderId provided');
+    }
+
+    if (!options.packageCode) {
+        throw new Error('packageCode is required');
+    }
+
+    if (!options.weight) {
+        throw new Error('weight is required');
+    }
+
+    if (!options.shipTo) {
+        throw new Error('shipTo address is required');
+    }
+
+    // Ensure country codes are uppercase
+    const shipTo = {
+        ...options.shipTo,
+        country: options.shipTo.country?.toUpperCase() || 'US'
+    };
+
+    const shipFrom = options.shipFrom || {
+        name: process.env.SHIP_FROM_NAME,
+        company: process.env.SHIP_FROM_COMPANY,
+        street1: process.env.SHIP_FROM_STREET,
+        city: process.env.SHIP_FROM_CITY,
+        state: process.env.SHIP_FROM_STATE,
+        postalCode: process.env.SHIP_FROM_POSTAL_CODE,
+        country: (process.env.SHIP_FROM_COUNTRY || "US").toUpperCase(),
+        phone: process.env.SHIP_FROM_PHONE
+    };
+
+    // Create label request payload
+    const labelRequest = {
+        orderId: parseInt(orderId, 10),  // ShipStation expects orderId as a number
+        carrierCode: options.carrierCode || (serviceCode.includes('usps') ? 'stamps_com' : 'ups'),
+        serviceCode: serviceCode,
+        packageCode: options.packageCode || 'package',
+        confirmation: options.confirmation || 'none',
+        shipDate: new Date().toISOString(),
+        weight: {
+            value: options.weight?.value || 1,
+            units: options.weight?.units || 'ounces'
+        },
+        dimensions: options.dimensions || {
+            length: 12,
+            width: 12,
+            height: 12,
+            units: 'inches'
+        },
+        shipFrom,
+        shipTo,
+        insuranceOptions: {
+            provider: 'carrier',
+            insureShipment: false,
+            insuredValue: 0
+        },
+        internationalOptions: {
+            contents: 'merchandise',
+            customsItems: []
+        },
+        advancedOptions: {
+            billToParty: null,
+            billToAccount: null,
+            billToPostalCode: null,
+            billToCountryCode: null
+        },
+        testLabel: options.testLabel ?? (process.env.NODE_ENV !== 'production')
+    };
+
+    console.log('Creating label with request:', JSON.stringify(labelRequest, null, 2));
+
+    const response = await fetch(`${SHIPSTATION_API_URL}/shipments/createlabel`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ rateId })
+        body: JSON.stringify(labelRequest)
     });
 
-    return handleShipStationResponse<ShippingLabel>(response);
+    const labelResponse = await handleShipStationResponse<ShippingLabel>(response);
+
+    if (!labelResponse.labelData) {
+        console.error('Label creation failed:', JSON.stringify(labelResponse, null, 2));
+        throw new Error('Failed to create shipping label: No label data returned');
+    }
+
+    // If we got label data, consider it a success even if shipmentId is -1
+    return {
+        ...labelResponse,
+        shipmentId: labelResponse.shipmentId || -1
+    };
 }
 
 export async function getTrackingInfo(trackingNumber: string): Promise<TrackingInfo> {

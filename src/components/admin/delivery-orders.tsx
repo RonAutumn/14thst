@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, ArrowUpDown, Search, Calendar as CalendarIcon } from "lucide-react"
+import { MoreHorizontal, ArrowUpDown, Search } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -63,6 +63,18 @@ export function DeliveryOrders() {
             ? parseOrderItems(order.items)
             : (order.items as OrderItem[] || [])
 
+          // Ensure we have a valid delivery date
+          let deliveryDate = order.deliveryDate || order.timestamp
+          try {
+            // Validate the date
+            const testDate = new Date(deliveryDate)
+            if (isNaN(testDate.getTime())) {
+              deliveryDate = new Date().toISOString() // Fallback to current date if invalid
+            }
+          } catch {
+            deliveryDate = new Date().toISOString() // Fallback to current date if parsing fails
+          }
+
           return {
             id: order.id || order.orderId || '',
             orderId: order.orderId || order.id || '',
@@ -78,9 +90,9 @@ export function DeliveryOrders() {
             borough: order.borough || '',
             city: 'New York',
             state: 'NY',
-            zipCode: '',
+            zipCode: order.zipCode || '',
             paymentMethod: 'card',
-            deliveryDate: order.deliveryDate || ''
+            deliveryDate: deliveryDate
           }
         })
 
@@ -165,20 +177,31 @@ export function DeliveryOrders() {
   const pendingOrders = orders.filter(order => order.status === 'pending').length
   const processingOrders = orders.filter(order => order.status === 'processing').length
   const completedOrders = orders.filter(order => order.status === 'delivered').length
+
   // Group orders by delivery date
   const ordersByDate = orders.reduce((acc: { [key: string]: DeliveryOrder[] }, order) => {
-    const date = order.deliveryDate || format(new Date(order.timestamp), 'yyyy-MM-dd')
-    if (!acc[date]) {
-      acc[date] = []
+    try {
+      // Use deliveryDate if available, otherwise use timestamp
+      const date = format(new Date(order.deliveryDate || order.timestamp), 'yyyy-MM-dd')
+      if (!acc[date]) {
+        acc[date] = []
+      }
+      acc[date].push(order)
+    } catch (error) {
+      console.error('Error processing date for order:', order.id, error)
     }
-    acc[date].push(order)
     return acc
   }, {})
 
   // Get orders for selected date
   const getOrdersForDate = (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd')
-    return ordersByDate[dateStr] || []
+    try {
+      const dateStr = format(date, 'yyyy-MM-dd')
+      return ordersByDate[dateStr] || []
+    } catch (error) {
+      console.error('Error getting orders for date:', date, error)
+      return []
+    }
   }
 
   const selectedDateOrders = selectedDate ? getOrdersForDate(selectedDate) : []
@@ -207,9 +230,9 @@ export function DeliveryOrders() {
       </div>
 
       <Tabs defaultValue="table" className="w-full">
-        <TabsList>
-          <TabsTrigger value="table">Table View</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
+        <TabsList className="w-full border-b mb-4">
+          <TabsTrigger value="table" className="flex-1">Table View</TabsTrigger>
+          <TabsTrigger value="calendar" className="flex-1">Calendar View</TabsTrigger>
         </TabsList>
 
         <TabsContent value="table">
@@ -339,8 +362,8 @@ export function DeliveryOrders() {
         </TabsContent>
 
         <TabsContent value="calendar" className="space-y-4">
-          <div className="flex gap-4">
-            <div className="w-fit border rounded-lg p-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-4">
+            <div className="border rounded-lg p-4 h-fit bg-background">
               <Calendar
                 mode="single"
                 selected={selectedDate}
@@ -348,8 +371,12 @@ export function DeliveryOrders() {
                 className="rounded-md"
                 modifiers={{
                   hasOrders: (date) => {
-                    const dateStr = format(date, 'yyyy-MM-dd')
-                    return !!ordersByDate[dateStr]?.length
+                    try {
+                      const dateStr = format(date, 'yyyy-MM-dd')
+                      return !!ordersByDate[dateStr]?.length
+                    } catch {
+                      return false
+                    }
                   }
                 }}
                 modifiersStyles={{
@@ -360,69 +387,109 @@ export function DeliveryOrders() {
                     borderRadius: '4px'
                   }
                 }}
+                footer={selectedDate && (
+                  <div className="text-sm text-center mt-2">
+                    {selectedDateOrders.length} orders on {format(selectedDate, 'MMM d')}
+                  </div>
+                )}
               />
             </div>
 
-            <Card className="flex-1 p-4">
-              <h3 className="text-lg font-semibold mb-4">
-                {selectedDate ? (
-                  <>
-                    Deliveries for {format(selectedDate, 'MMMM d, yyyy')}
-                    <span className="ml-2 text-sm text-muted-foreground">
-                      ({selectedDateOrders.length} orders)
-                    </span>
-                  </>
-                ) : (
-                  'Select a date to view deliveries'
-                )}
-              </h3>
+            <div className="flex-1 space-y-4">
+              <Card className="p-4">
+                <h3 className="text-lg font-semibold mb-4">
+                  {selectedDate ? (
+                    <>
+                      Deliveries for {format(selectedDate, 'MMMM d, yyyy')}
+                      <span className="ml-2 text-sm text-muted-foreground">
+                        ({selectedDateOrders.length} orders)
+                      </span>
+                    </>
+                  ) : (
+                    'Select a date to view deliveries'
+                  )}
+                </h3>
 
-              {selectedDateOrders.length > 0 ? (
-                <div className="space-y-4">
-                  {selectedDateOrders.map((order) => (
-                    <Card key={order.id} className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-medium">#{order.orderId}</div>
-                          <div className="text-sm text-muted-foreground">{order.customerName}</div>
-                          <div className="text-sm">{order.deliveryAddress}</div>
-                          <div className="text-sm">{order.borough}</div>
+                {selectedDateOrders.length > 0 ? (
+                  <div className="space-y-4">
+                    {selectedDateOrders.map((order) => (
+                      <Card key={order.id} className="p-4 hover:bg-accent transition-colors">
+                        <div className="flex flex-col gap-4">
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <div className="font-medium">#{order.orderId}</div>
+                                <Badge
+                                  variant={
+                                    order.status === 'delivered' ? 'default' :
+                                    order.status === 'processing' ? 'secondary' :
+                                    order.status === 'cancelled' ? 'destructive' :
+                                    'outline'
+                                  }
+                                >
+                                  {order.status}
+                                </Badge>
+                              </div>
+                              <div className="text-sm font-medium">{order.customerName}</div>
+                              <div className="text-sm text-muted-foreground">{order.deliveryAddress}</div>
+                              <div className="text-sm text-muted-foreground">{order.borough}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {format(new Date(order.deliveryDate || order.timestamp), 'h:mm a')}
+                              </div>
+                            </div>
+                            <div className="text-right space-y-1">
+                              <div className="font-medium">${order.total.toFixed(2)}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {order.items.length} items
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  Update Status
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-[200px]">
+                                <DropdownMenuLabel>Update Order Status</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => handleStatusUpdate(order.id, 'processing')}>
+                                  Mark as processing
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusUpdate(order.id, 'shipped')}>
+                                  Mark as shipped
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusUpdate(order.id, 'delivered')}>
+                                  Mark as delivered
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusUpdate(order.id, 'cancelled')} className="text-destructive">
+                                  Cancel order
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedOrder(order)
+                                setIsDetailsOpen(true)
+                              }}
+                            >
+                              View Details
+                            </Button>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <Badge
-                            variant={
-                              order.status === 'delivered' ? 'default' :
-                              order.status === 'processing' ? 'secondary' :
-                              order.status === 'cancelled' ? 'destructive' :
-                              'outline'
-                            }
-                          >
-                            {order.status}
-                          </Badge>
-                          <div className="mt-2 font-medium">${order.total.toFixed(2)}</div>
-                        </div>
-                      </div>
-                      <div className="mt-4 flex justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedOrder(order)
-                            setIsDetailsOpen(true)
-                          }}
-                        >
-                          View Details
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground py-8">
-                  No deliveries scheduled for this date
-                </div>
-              )}
-            </Card>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    No deliveries scheduled for this date
+                  </div>
+                )}
+              </Card>
+            </div>
           </div>
         </TabsContent>
       </Tabs>

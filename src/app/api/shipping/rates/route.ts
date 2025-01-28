@@ -11,10 +11,7 @@ interface RequestData {
     zipCode?: string;
     phone?: string;
     items?: Array<{
-        id?: string;
-        name?: string;
         quantity?: number;
-        price?: number;
         weight?: number;
     }>;
 }
@@ -31,9 +28,18 @@ export async function POST(request: Request) {
         const data: RequestData = await request.json();
         console.log('Received request data:', data);
 
+        // Map items to only include quantity and weight
+        const items = (data.items || []).map(item => ({
+            quantity: item.quantity || 1,
+            weight: {
+                value: 1,
+                units: 'ounces'
+            }
+        }));
+
         // Calculate total weight from items or use default
-        const totalWeight = data.items?.reduce(
-            (sum, item) => sum + ((item.weight || 1) * (item.quantity || 1)),
+        const totalWeight = items.reduce(
+            (sum, item) => sum + (item.weight.value * item.quantity),
             0
         ) || 1;
 

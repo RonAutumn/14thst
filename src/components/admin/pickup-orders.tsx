@@ -21,7 +21,7 @@ import { MoreHorizontal, ArrowUpDown, Search } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { OrderDetails } from "./order-details"
+import { PickupOrderDetails } from "./pickup-order-details"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { OrderStatus } from "@/types/orders"
@@ -99,7 +99,7 @@ export function PickupOrders() {
 
   const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
     try {
-      const response = await fetch(`/api/pickup-orders/${orderId}`, {
+      const response = await fetch(`/api/order-status/${orderId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -319,7 +319,7 @@ export function PickupOrders() {
       </div>
 
       {selectedOrder && (
-        <OrderDetails
+        <PickupOrderDetails
           order={selectedOrder}
           open={!!selectedOrder}
           onOpenChange={(open) => {

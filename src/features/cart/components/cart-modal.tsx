@@ -38,11 +38,11 @@ export function CartModal({ open, onClose }: CartModalProps) {
   const deliveryFee = getDeliveryFee();
   const total = getTotal();
 
-  const handleQuantityChange = (itemId: string, newQuantity: number) => {
+  const handleQuantityChange = (itemId: string, variation: string | undefined, newQuantity: number) => {
     if (newQuantity < 1) {
-      removeItem(itemId);
+      removeItem(itemId, variation);
     } else {
-      updateQuantity(itemId, newQuantity);
+      updateQuantity(itemId, variation, newQuantity);
     }
   };
 
@@ -107,7 +107,7 @@ export function CartModal({ open, onClose }: CartModalProps) {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                        onClick={() => handleQuantityChange(item.id, item.selectedVariation?.name, item.quantity - 1)}
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
@@ -116,7 +116,7 @@ export function CartModal({ open, onClose }: CartModalProps) {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                        onClick={() => handleQuantityChange(item.id, item.selectedVariation?.name, item.quantity + 1)}
                       >
                         <Plus className="h-3 w-3" />
                       </Button>
@@ -124,7 +124,7 @@ export function CartModal({ open, onClose }: CartModalProps) {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive"
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => removeItem(item.id, item.selectedVariation?.name)}
                       >
                         <X className="h-4 w-4" />
                       </Button>

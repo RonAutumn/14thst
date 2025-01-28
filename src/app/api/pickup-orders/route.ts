@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 interface AirtablePickupOrder {
     'Order ID': string;
-    'Created Time': string;
+    'Timestamp': string;
     'Customer Name': string;
     'Email': string;
     'Phone': string;
@@ -15,7 +15,6 @@ interface AirtablePickupOrder {
     'Total': number;
     'Status': string;
     'Pickup Date': string;
-    'Pickup Time': string;
 }
 
 export async function GET() {
@@ -24,15 +23,14 @@ export async function GET() {
         const pickupOrders = await getAirtableData(TABLES.PICKUP_ORDERS, {
             fields: [
                 'Order ID',
-                'Created Time',
+                'Timestamp',
                 'Customer Name',
                 'Email',
                 'Phone',
                 'Items',
                 'Total',
                 'Status',
-                'Pickup Date',
-                'Pickup Time'
+                'Pickup Date'
             ],
             sort: [{ field: 'Pickup Date', direction: 'asc' }]
         }) as unknown as AirtablePickupOrder[];
@@ -61,6 +59,11 @@ export async function GET() {
                     console.warn(`Error parsing items for order ${order['Order ID']}:`, e);
                 }
 
+                // Parse pickup date and time
+                const pickupDateTime = order['Pickup Date'] ? new Date(order['Pickup Date']) : null;
+                const pickupDate = pickupDateTime ? pickupDateTime.toISOString().split('T')[0] : '';
+                const pickupTime = pickupDateTime ? pickupDateTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '';
+
                 return {
                     id: order['Order ID'],
                     orderId: order['Order ID'],
@@ -70,9 +73,9 @@ export async function GET() {
                     items: parsedItems,
                     status: order['Status'] || 'pending',
                     total: Number(order['Total']) || 0,
-                    timestamp: order['Created Time'] || new Date().toISOString(),
-                    pickupDate: order['Pickup Date'] || '',
-                    pickupTime: order['Pickup Time'] || ''
+                    timestamp: order['Timestamp'] || new Date().toISOString(),
+                    pickupDate,
+                    pickupTime
                 };
             } catch (error) {
                 console.error(`Error transforming order ${order['Order ID']}:`, error);
